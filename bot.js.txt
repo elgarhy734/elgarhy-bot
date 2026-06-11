@@ -1,0 +1,102 @@
+// √„— /deletereview
+bot.onText(/\/deletereview/, (msg) => {
+  if (msg.chat.id !== ADMIN_ID) return;
+  bot.sendMessage(ADMIN_ID, '? *√—”· —ﬁ„ «·—√Ì «·–Ì  —Ìœ Õ–›Â:*', { parse_mode: 'Markdown' });
+  bot.once('message', (msg2) => {
+    const index = parseInt(msg2.text) - 1;
+    const fs = require('fs');
+    try {
+      let reviews = JSON.parse(fs.readFileSync('reviews.json', 'utf8'));
+      if (index < 0 || index >= reviews.length) {
+        bot.sendMessage(ADMIN_ID, '? —ﬁ„ €Ì— ’ÕÌÕ.');
+        return;
+      }
+      reviews.splice(index, 1);
+      fs.writeFileSync('reviews.json', JSON.stringify(reviews, null, 2));
+      bot.sendMessage(ADMIN_ID, '? * „ Õ–› «·—√Ì »‰Ã«Õ.*', { parse_mode: 'Markdown' });
+    } catch (err) {
+      bot.sendMessage(ADMIN_ID, '? ÕœÀ Œÿ√.');
+    }
+  });
+});
+
+// √„— /help
+bot.onText(/\/help/, (msg) => {
+  if (msg.chat.id !== ADMIN_ID) return;
+  bot.sendMessage(ADMIN_ID, 
+?? *ﬁ«∆„… «·√Ê«„— «·„›’·…:*
+
+/addproduct ? ≈÷«›… „‰ Ã ÃœÌœ (Ìÿ·» „‰ﬂ «·»Ì«‰«  ŒÿÊ… »ŒÿÊ…)
+/listproducts ?? ⁄—÷ Ã„Ì⁄ «·„‰ Ã«  „⁄ «·„⁄—›« 
+/deleteproduct ??? Õ–› „‰ Ã ( Õ «Ã ≈—”«· ID «·„‰ Ã)
+/reviews ? ⁄—÷ ¬—«¡ «·⁄„·«¡
+/deletereview ? Õ–› —√Ì ⁄„Ì·
+/orders ?? ⁄—÷ ÿ·»«  «·⁄„·«¡ «·Ê«—œ… ⁄»— Ê« ”«»
+/start ?? ≈⁄«œ…  ‘€Ì· «·»Ê 
+/help ?? ⁄—÷ Â–Â «·„”«⁄œ…
+
+*„·«ÕŸ…:* «·»Ê  Œ«’ »ﬂ ›ﬁÿ° ·« Ì„ﬂ‰ ·√Õœ €Ì—ﬂ «” Œœ«„Â.
+  , { parse_mode: 'Markdown' });
+});
+
+// „⁄«·Ã… ≈÷«›… «·„‰ Ã ŒÿÊ… »ŒÿÊ…
+bot.on('message', (msg) => {
+  const chatId = msg.chat.id;
+  if (chatId !== ADMIN_ID) return;
+  if (msg.text && msg.text.startsWith('/')) return;
+  
+  const fs = require('fs');
+  
+  if (tempProduct[ADMIN_ID]) {
+    const step = tempProduct[ADMIN_ID].step;
+    
+    if (step === 'name') {
+      tempProduct[ADMIN_ID].name = msg.text;
+      tempProduct[ADMIN_ID].step = 'price';
+      bot.sendMessage(ADMIN_ID, '?? *√—”· ”⁄— «·„‰ Ã (—ﬁ„ ›ﬁÿ):*', { parse_mode: 'Markdown' });
+    }
+    else if (step === 'price') {
+      tempProduct[ADMIN_ID].price = parseFloat(msg.text);
+      tempProduct[ADMIN_ID].step = 'image';
+      bot.sendMessage(ADMIN_ID, '??? *√—”· —«»ÿ ’Ê—… «·„‰ Ã:* (√Ê «ﬂ » " ŒÿÏ")', { parse_mode: 'Markdown' });
+    }
+    else if (step === 'image') {
+      let image = msg.text === ' ŒÿÏ' ? 'https://picsum.photos/200/200' : msg.text;
+      tempProduct[ADMIN_ID].image = image;
+      tempProduct[ADMIN_ID].step = 'desc';
+      bot.sendMessage(ADMIN_ID, '?? *√—”· Ê’› «·„‰ Ã:*', { parse_mode: 'Markdown' });
+    }
+    else if (step === 'desc') {
+      tempProduct[ADMIN_ID].desc = msg.text;
+      
+      // Õ›Ÿ «·„‰ Ã
+      let products = [];
+      try {
+        products = JSON.parse(fs.readFileSync('products.json', 'utf8'));
+      } catch (err) {}
+      
+      const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+      const newProduct = {
+        id: newId,
+        name: tempProduct[ADMIN_ID].name,
+        price: tempProduct[ADMIN_ID].price,
+        image: tempProduct[ADMIN_ID].image,
+        desc: tempProduct[ADMIN_ID].desc
+      };
+      products.push(newProduct);
+      fs.writeFileSync('products.json', JSON.stringify(products, null, 2));
+      
+      bot.sendMessage(ADMIN_ID, ? * „ ≈÷«›… «·„‰ Ã »‰Ã«Õ!*\n\n?? ID: ${newId}\n?? «·«”„: ${newProduct.name}\n?? «·”⁄—: ${newProduct.price}$\n?? «·Ê’›: ${newProduct.desc}, { parse_mode: 'Markdown' });
+      
+      delete tempProduct[ADMIN_ID];
+    }
+  }
+});
+
+// ≈‰‘«¡ „·›«  ›«—€… ⁄‰œ «·»œ¡
+const fs = require('fs');
+if (!fs.existsSync('products.json')) fs.writeFileSync('products.json', '[]');
+if (!fs.existsSync('reviews.json')) fs.writeFileSync('reviews.json', '[]');
+if (!fs.existsSync('orders.json')) fs.writeFileSync('orders.json', '[]');
+
+console.log('? »Ê  „ Ã— ELgarhy ‘€«· »‰Ã«Õ!');
